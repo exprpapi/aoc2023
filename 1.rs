@@ -29,20 +29,20 @@ fn main() {
 }
 
 fn sol_part1(input: &str) -> u32 {
-  input.lines()
-    .map(|line| line.chars().filter(|c| c.is_digit(10)).map(|c| c.to_digit(10).unwrap()))
-    .map(line_val).sum()
+  input.lines().map(|line|
+    line_val(line.chars().filter(|c| c.is_digit(10)).map(|c| c.to_digit(10).unwrap()))
+  ).sum()
 }
 
 fn sol_part2(input: &str) -> u32 {
-  let ac = aho_corasick::AhoCorasick::new(&[
+  let re = aho_corasick::AhoCorasick::new(&[
     "0", "1", "2", "3", "4", "5", "6", "7", "8", "9",
     "zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine",
   ]).unwrap();
 
-  input.lines()
-    .map(|line| ac.find_overlapping_iter(line).map(|m| m.pattern().as_u32() % 10))
-    .map(line_val).sum()
+  input.lines().map(|line|
+    line_val(re.find_overlapping_iter(line).map(|m| m.pattern().as_u32() % 10))
+  ).sum()
 }
 
 fn line_val(mut digits: impl Iterator<Item = u32>) -> u32 {
