@@ -22,53 +22,66 @@
 
 fn main() {
   let maxgame = Game { r: 12, g: 13, b: 14 };
-  assert_eq!(sol(INPUT_PART1, &maxgame), 8);
-  assert_eq!(sol(INPUT_PART2, &maxgame), 2541);
+  assert_eq!(sol_part1(INPUT_EXAMPLE, &maxgame), 8);
+  assert_eq!(sol_part1(INPUT, &maxgame), 2541);
+  assert_eq!(sol_part2(INPUT_EXAMPLE), 2286);
+  assert_eq!(sol_part2(INPUT), 66016);
 }
 
-fn sol(input: &str, maxgame: &Game) -> u32 {
-  let mut sum = 0;
-  for (i, game) in (1..).zip(parse_games(input).iter()) {
-    if game.less_eq(maxgame) {
-      sum += i as u32;
-    }
-  }
-  sum
+fn sol_part1(input: &str, maxgame: &Game) -> u32 {
+  (1..).zip(parse_games(input))
+    .filter(|(_, max)| max.less_eq(maxgame))
+    .map(|(i, _)| i)
+    .sum()
 }
 
-#[derive(Debug)]
-struct Game { r: usize, g: usize, b: usize, }
+fn sol_part2(input: &str) -> u32 {
+  parse_games(input)
+    .map(|max| max.r * max.g * max.b)
+    .sum()
+}
+
+#[derive(Clone, Copy, Debug)]
+struct Game { r: u32, g: u32, b: u32 }
 
 impl Game {
-  fn less_eq(&self, other: &Game) -> bool {
+  const MIN: Self = Self { r: u32::MIN, g: u32::MIN, b: u32::MIN };
+
+  fn less_eq(&self, other: &Self) -> bool {
     self.r <= other.r && self.g <= other.g && self.b <= other.b
   }
-}
 
-fn parse_games(input: &str) -> Vec<Game> {
-  input.lines().map(parse_game).collect()
-}
-
-fn parse_game(line: &str) -> Game {
-  let mut game = Game { r: 0, g: 0, b: 0 };
-  let draws = line.split(":").nth(1).expect("Game should have right side of ':'").trim();
-  for draw in draws.split(";").map(str::trim) {
-    for color in draw.split(",").map(str::trim) {
-      let tokens = color.split_whitespace().collect::<Vec<_>>();
-      let n = tokens[0];
-      let c = tokens[1];
-      match c {
-        "red" => game.r = game.r.max(n.parse::<usize>().expect("invalid number")),
-        "green" => game.g = game.g.max(n.parse::<usize>().expect("invalid number")),
-        "blue" => game.b = game.b.max(n.parse::<usize>().expect("invalid number")),
-        _ => panic!("unexpected color"),
-      }
+  fn max(&self, other: &Self) -> Self {
+    Self {
+      r: self.r.max(other.r),
+      g: self.g.max(other.g),
+      b: self.b.max(other.b),
     }
   }
-  game
 }
 
-static INPUT_PART1: &str = indoc::indoc!(r"
+fn parse_games(input: &str) -> impl Iterator<Item = Game> {
+  input.lines().map(|line| {
+    let mut max = Game::MIN;
+    for draw in line.split(":").nth(1).expect("Game should have right side of ':'").trim().split(";").map(str::trim) { 
+      for color in draw.split(",").map(str::trim) {
+        let mut curr_max = Game::MIN;
+        let [n, c, ..] = color.split_whitespace().collect::<Vec<_>>()[..2] else { panic!("bad color"); };
+        let n = n.parse::<u32>().expect("invalid number");
+        match c {
+          "red" => curr_max.r = n,
+          "green" => curr_max.g = n,
+          "blue" => curr_max.b = n,
+          _ => panic!("unexpected color"),
+        }
+        max = max.max(&curr_max);
+      }
+    }
+    max
+  })
+}
+
+static INPUT_EXAMPLE: &str = indoc::indoc!(r"
   Game 1: 3 blue, 4 red; 1 red, 2 green, 6 blue; 2 green
   Game 2: 1 blue, 2 green; 3 green, 4 blue, 1 red; 1 green, 1 blue
   Game 3: 8 green, 6 blue, 20 red; 5 blue, 4 red, 13 green; 5 green, 1 red
@@ -76,7 +89,7 @@ static INPUT_PART1: &str = indoc::indoc!(r"
   Game 5: 6 red, 1 blue, 3 green; 2 blue, 1 red, 2 green
 ");
 
-static INPUT_PART2: &str = indoc::indoc!(r"
+static INPUT: &str = indoc::indoc!(r"
   Game 1: 1 green, 2 blue; 13 red, 2 blue, 3 green; 4 green, 14 red
   Game 2: 2 blue, 11 green; 4 blue, 12 red, 4 green; 7 red, 1 blue, 9 green; 10 green, 12 red, 6 blue
   Game 3: 1 blue, 12 green, 2 red; 9 red, 16 green; 1 red, 10 green, 1 blue; 1 red, 14 green
